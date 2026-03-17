@@ -1,0 +1,6 @@
+{
+  "name": "esp32-log-server",
+  "scripts": {
+    "start": "bun run index.ts"
+  }
+}

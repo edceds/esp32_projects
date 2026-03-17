@@ -13,12 +13,21 @@ extern "C" {
 #include "esp_log.h"
 #include "esp_http_client.h"
 #include "esp_tls.h"
+#include "driver/gpio.h"
 }
 
 static const char* TAG = "CPP_HTTP";
 
+#define DEV_MODE 1  // 1 = local PC, 0 = production (jadefi)
+
 constexpr const char* WIFI_SSID = "HUAWEI-2.4G-Fd8C";
 constexpr const char* WIFI_PASS = "a3Ptrp8s";
+
+#if DEV_MODE
+constexpr const char* POST_URL = "http://192.168.18.222:3100/";
+#else
+constexpr const char* POST_URL = "http://server.jadefi.io:3100/";
+#endif
 
 static bool wifi_ready = false;
 
@@ -139,4 +148,46 @@ extern "C" void app_main()
     }
 
     esp_http_client_cleanup(client);
+
+    /* ================= GPIO 33 STATUS ================= */
+
+    gpio_set_direction(GPIO_NUM_33, GPIO_MODE_INPUT);
+
+    int prev_level = gpio_get_level(GPIO_NUM_33);
+
+    while (true) {
+        int level = gpio_get_level(GPIO_NUM_33);
+
+        if (level != prev_level) {
+            const char* state = level ? "high" : "low";
+            ESP_LOGI(TAG, "GPIO 33 changed to %s — sending POST", state);
+
+            char post_data[64];
+            snprintf(post_data, sizeof(post_data), "{\"gpio33\":\"%s\"}", state);
+
+            esp_http_client_config_t post_config{};
+            post_config.url = POST_URL;
+            post_config.event_handler = http_event_handler;
+            post_config.timeout_ms = 10000;
+
+            auto post_client = esp_http_client_init(&post_config);
+            esp_http_client_set_method(post_client, HTTP_METHOD_POST);
+            esp_http_client_set_header(post_client, "Content-Type", "application/json");
+            esp_http_client_set_post_field(post_client, post_data, strlen(post_data));
+
+            auto post_err = esp_http_client_perform(post_client);
+
+            if (post_err == ESP_OK) {
+                ESP_LOGI(TAG, "POST Status = %d",
+                         esp_http_client_get_status_code(post_client));
+            } else {
+                ESP_LOGE(TAG, "POST failed: %s", esp_err_to_name(post_err));
+            }
+
+            esp_http_client_cleanup(post_client);
+        }
+
+        prev_level = level;
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
 }

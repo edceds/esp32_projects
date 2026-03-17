@@ -1,0 +1,130 @@
+[
+  {
+    "timestamp": "2026-03-17T05:52:38.079Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:38.649Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:39.218Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:39.930Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:41.551Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:42.285Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:42.983Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:43.542Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:44.114Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:44.826Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:45.362Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:45.921Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:46.482Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:52:47.010Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:55:36.658Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:55:36.809Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:55:37.373Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:55:39.612Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:00.977Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:03.384Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:03.516Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:05.450Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:09.046Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:10.037Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:10.876Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:11.679Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:12.495Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:13.237Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:13.936Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:14.672Z",
+    "gpio33": "high"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:15.206Z",
+    "gpio33": "low"
+  },
+  {
+    "timestamp": "2026-03-17T05:56:16.791Z",
+    "gpio33": "high"
+  }
+]
