@@ -15,6 +15,7 @@ extern "C" {
 #include "esp_tls.h"
 #include "esp_system.h"
 #include "esp_chip_info.h"
+#include "esp_timer.h"
 #include "driver/gpio.h"
 }
 
