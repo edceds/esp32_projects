@@ -13,6 +13,8 @@ extern "C" {
 #include "esp_log.h"
 #include "esp_http_client.h"
 #include "esp_tls.h"
+#include "esp_system.h"
+#include "esp_chip_info.h"
 #include "driver/gpio.h"
 }
 
@@ -128,32 +130,17 @@ extern "C" void app_main()
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 
-    ESP_LOGI(TAG, "WiFi ready — sending HTTP GET");
-
-    esp_http_client_config_t config{};
-    config.url = "http://server.jadefi.io:4000/";
-    config.event_handler = http_event_handler;
-    config.timeout_ms = 10000;
-
-    auto client = esp_http_client_init(&config);
-
-    auto err = esp_http_client_perform(client);
-
-    if (err == ESP_OK) {
-        ESP_LOGI(TAG, "HTTP Status = %d",
-                 esp_http_client_get_status_code(client));
-    } else {
-        ESP_LOGE(TAG, "HTTP request failed: %s",
-                 esp_err_to_name(err));
-    }
-
-    esp_http_client_cleanup(client);
+    ESP_LOGI(TAG, "WiFi ready");
 
     /* ================= GPIO 33 STATUS ================= */
 
     gpio_set_direction(GPIO_NUM_33, GPIO_MODE_INPUT);
 
     int prev_level = gpio_get_level(GPIO_NUM_33);
+
+    // Get chip info once at boot
+    esp_chip_info_t chip_info;
+    esp_chip_info(&chip_info);
 
     while (true) {
         int level = gpio_get_level(GPIO_NUM_33);
@@ -162,8 +149,32 @@ extern "C" void app_main()
             const char* state = level ? "high" : "low";
             ESP_LOGI(TAG, "GPIO 33 changed to %s — sending POST", state);
 
-            char post_data[64];
-            snprintf(post_data, sizeof(post_data), "{\"gpio33\":\"%s\"}", state);
+            // Gather dynamic info
+            uint32_t uptime_s = (uint32_t)(esp_timer_get_time() / 1000000);
+            uint32_t free_heap = esp_get_free_heap_size();
+
+            wifi_ap_record_t ap_info;
+            int8_t rssi = 0;
+            if (esp_wifi_sta_get_ap_info(&ap_info) == ESP_OK) {
+                rssi = ap_info.rssi;
+            }
+
+            char post_data[256];
+            snprintf(post_data, sizeof(post_data),
+                     "{"
+                     "\"gpio33\":\"%s\","
+                     "\"uptime_s\":%lu,"
+                     "\"free_heap\":%lu,"
+                     "\"wifi_rssi\":%d,"
+                     "\"chip_cores\":%d,"
+                     "\"chip_revision\":%d"
+                     "}",
+                     state,
+                     (unsigned long)uptime_s,
+                     (unsigned long)free_heap,
+                     (int)rssi,
+                     (int)chip_info.cores,
+                     (int)chip_info.revision);
 
             esp_http_client_config_t post_config{};
             post_config.url = POST_URL;
