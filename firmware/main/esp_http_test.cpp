@@ -18,7 +18,7 @@ extern "C" {
 
 static const char* TAG = "CPP_HTTP";
 
-#define DEV_MODE 1  // 1 = local PC, 0 = production (jadefi)
+#define DEV_MODE 0  // 1 = local PC, 0 = production (jadefi)
 
 constexpr const char* WIFI_SSID = "HUAWEI-2.4G-Fd8C";
 constexpr const char* WIFI_PASS = "a3Ptrp8s";
@@ -26,7 +26,7 @@ constexpr const char* WIFI_PASS = "a3Ptrp8s";
 #if DEV_MODE
 constexpr const char* POST_URL = "http://192.168.18.222:3100/";
 #else
-constexpr const char* POST_URL = "http://server.jadefi.io:3100/";
+constexpr const char* POST_URL = "http://164.68.102.43:3100/";
 #endif
 
 static bool wifi_ready = false;
