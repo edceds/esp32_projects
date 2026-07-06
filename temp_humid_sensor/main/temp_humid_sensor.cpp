@@ -1,10 +1,16 @@
-// Read temperature + humidity from a DHT22 (AM2302) sensor.
+// Read temperature + humidity from a DHT22 (AM2302) sensor and show them on a
+// 16x2 I2C LCD.
 //
 // Wiring:
 //   DHT22 pin 1 (VCC)  -> 3V3
 //   DHT22 pin 2 (DATA) -> DHT_GPIO (with a 10k pull-up to 3V3)
 //   DHT22 pin 3 (NC)   -> not connected
 //   DHT22 pin 4 (GND)  -> GND
+//
+//   LCD VCC -> 5V (VIN)   <-- 5V, nao 3V3, senao o display fica apagado
+//   LCD GND -> GND
+//   LCD SDA -> GPIO26
+//   LCD SCL -> GPIO27
 //
 // The DHT22 uses a single-wire, timing-based protocol. There is no ESP-IDF
 // driver for it, so we bit-bang GPIO directly through a typed pin wrapper
@@ -19,15 +25,23 @@ extern "C"
 #include "freertos/task.h"
 #include "esp_rom_sys.h" // esp_rom_delay_us
 #include "esp_log.h"
+#include "driver/i2c_master.h"
 }
 
+#include <cstdio>
 #include "gpio_pin.hpp"
+#include "lcd1602.hpp"
 
 // The data pin. GPIO32 is on the left side of the DevKit and is output-capable.
 // Because DhtPin below is an OpenDrainPin, choosing an input-only GPIO (34-39)
 // is a COMPILE error, not a runtime one — try GPIO_NUM_36 to see.
 static constexpr gpio_num_t DHT_GPIO = GPIO_NUM_32;
 static constexpr int DHT_TIMEOUT_US = 1000; // give up waiting for an edge
+
+// LCD 16x2 I2C: SDA no GPIO26, SCL no GPIO27 (ambos output-capable).
+static constexpr gpio_num_t LCD_SDA = GPIO_NUM_26;
+static constexpr gpio_num_t LCD_SCL = GPIO_NUM_27;
+static constexpr uint8_t LCD_ADDR = 0x27; // troque p/ 0x3F se o scan achar isso
 
 static const char *TAG = "dht22";
 
@@ -121,11 +135,53 @@ static esp_err_t dht22_read(const DhtPin &line, float *temperature, float *humid
   return ESP_OK;
 }
 
+// Cria o barramento I2C nos pinos definidos e escaneia por dispositivos,
+// logando cada endereço encontrado (útil pra descobrir se o LCD é 0x27 ou 0x3F).
+static i2c_master_bus_handle_t i2c_setup()
+{
+  i2c_master_bus_config_t bus_cfg = {};
+  bus_cfg.i2c_port = I2C_NUM_0;
+  bus_cfg.sda_io_num = LCD_SDA;
+  bus_cfg.scl_io_num = LCD_SCL;
+  bus_cfg.clk_source = I2C_CLK_SRC_DEFAULT;
+  bus_cfg.glitch_ignore_cnt = 7;
+  bus_cfg.flags.enable_internal_pullup = true;
+
+  i2c_master_bus_handle_t bus = nullptr;
+  ESP_ERROR_CHECK(i2c_new_master_bus(&bus_cfg, &bus));
+
+  // Scan: passa por todos os endereços 7-bit e loga quem responde.
+  ESP_LOGI("i2c", "escaneando barramento (SDA=%d SCL=%d)...", LCD_SDA, LCD_SCL);
+  for (uint8_t addr = 1; addr < 0x7F; addr++)
+  {
+    if (i2c_master_probe(bus, addr, 50 /*ms*/) == ESP_OK)
+      ESP_LOGI("i2c", "  dispositivo encontrado em 0x%02X", addr);
+  }
+  return bus;
+}
+
 extern "C" void app_main(void)
 {
   // The data line idles high; enable the internal pull-up as a backup to the
   // external 10k resistor. Construction sets the pull mode.
   DhtPin line;
+
+  // --- LCD 16x2 I2C ---
+  i2c_master_bus_handle_t bus = i2c_setup();
+  Lcd1602 lcd;
+  esp_err_t lcd_err = lcd.begin(bus, LCD_ADDR);
+  if (lcd_err == ESP_OK)
+  {
+    lcd.backlight(true);
+    lcd.print_line(0, "DHT22 iniciando");
+    lcd.print_line(1, "aguarde...");
+  }
+  else
+  {
+    ESP_LOGE("lcd", "falha ao iniciar LCD em 0x%02X: %s (confira o endereco no "
+                    "scan acima e o VCC em 5V)",
+             LCD_ADDR, esp_err_to_name(lcd_err));
+  }
 
   // DHT22 needs ~1s after power-up before the first stable reading.
   vTaskDelay(pdMS_TO_TICKS(2000));
@@ -150,10 +206,23 @@ extern "C" void app_main(void)
     {
       ESP_LOGI(TAG, "Temperature: %.1f C   Humidity: %.1f %%",
                temperature, humidity);
+
+      // Mostra no LCD: linha 0 temperatura, linha 1 umidade.
+      // 0xDF é o caractere de grau (°) no mapa de caracteres do HD44780.
+      char l0[17], l1[17];
+      snprintf(l0, sizeof(l0), "Temp: %.1f%cC", temperature, 0xDF);
+      snprintf(l1, sizeof(l1), "Umid: %.1f%%", humidity);
+      if (lcd_err == ESP_OK)
+      {
+        lcd.print_line(0, l0);
+        lcd.print_line(1, l1);
+      }
     }
     else
     {
       ESP_LOGE(TAG, "read failed: %s", esp_err_to_name(err));
+      if (lcd_err == ESP_OK)
+        lcd.print_line(1, "leitura falhou");
     }
 
     // DHT22 sampling rate is max once every 2 seconds.

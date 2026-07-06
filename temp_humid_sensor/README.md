@@ -1,7 +1,8 @@
 # temp_humid_sensor
 
-Read temperature and humidity from a **DHT22 (AM2302)** sensor on an ESP32 and
-print the readings to the serial log every 2 seconds.
+Read temperature and humidity from a **DHT22 (AM2302)** sensor on an ESP32,
+print the readings to the serial log, and show them on a **16x2 I2C LCD**, every
+2 seconds.
 
 The DHT22 uses a single-wire timing protocol with no ESP-IDF driver, so
 [main/temp_humid_sensor.cpp](main/temp_humid_sensor.cpp) bit-bangs the GPIO
@@ -11,6 +12,8 @@ in [main/gpio_pin.hpp](main/gpio_pin.hpp), so picking an invalid pin is a
 
 ## Wiring
 
+**DHT22:**
+
 | DHT22 pin | Connect to |
 |-----------|-----------------------------------|
 | 1 (VCC)   | 3V3                               |
@@ -18,8 +21,32 @@ in [main/gpio_pin.hpp](main/gpio_pin.hpp), so picking an invalid pin is a
 | 3 (NC)    | — (not connected)                 |
 | 4 (GND)   | GND                               |
 
-The 10 kΩ pull-up on the data line is required. To use a different pin, change
-`DHT_GPIO` at the top of [main/temp_humid_sensor.cpp](main/temp_humid_sensor.cpp).
+**LCD 16x2 (módulo I2C / PCF8574):**
+
+| LCD pin | Connect to |
+|---------|-------------------------------------------|
+| VCC     | **5V (VIN)** — não 3V3, senão fica apagado |
+| GND     | GND                                       |
+| SDA     | GPIO26                                     |
+| SCL     | GPIO27                                     |
+
+O pull-up de 10 kΩ no DATA do DHT22 é recomendado (sem ele o código usa o
+pull-up interno + retry; veja abaixo). Para trocar pinos, edite as constantes
+`DHT_GPIO`, `LCD_SDA`, `LCD_SCL` no topo de
+[main/temp_humid_sensor.cpp](main/temp_humid_sensor.cpp).
+
+### Endereço I2C do LCD
+
+Esses módulos são quase sempre `0x27` ou `0x3F`. No boot o firmware **escaneia o
+barramento e loga o endereço encontrado**:
+
+```
+I (xxx) i2c: escaneando barramento (SDA=26 SCL=27)...
+I (xxx) i2c:   dispositivo encontrado em 0x27
+```
+
+Se o scan achar `0x3F` (ou outro), ajuste `LCD_ADDR` no topo do `.cpp`. Se o LCD
+não iniciar, o log avisa e lembra de conferir o VCC em 5V.
 
 ## Type-safe pins
 
