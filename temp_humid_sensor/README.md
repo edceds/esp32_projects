@@ -1,8 +1,8 @@
 # temp_humid_sensor
 
 Read temperature and humidity from a **DHT22 (AM2302)** sensor on an ESP32,
-print the readings to the serial log, and show them on a **16x2 I2C LCD**, every
-2 seconds.
+print the readings to the serial log, show them on a **16x2 I2C LCD**, and serve
+them on a **live web page** over the local network — all every 2 seconds.
 
 The DHT22 uses a single-wire timing protocol with no ESP-IDF driver, so
 [main/temp_humid_sensor.cpp](main/temp_humid_sensor.cpp) bit-bangs the GPIO
@@ -47,6 +47,29 @@ I (xxx) i2c:   dispositivo encontrado em 0x27
 
 Se o scan achar `0x3F` (ou outro), ajuste `LCD_ADDR` no topo do `.cpp`. Se o LCD
 não iniciar, o log avisa e lembra de conferir o VCC em 5V.
+
+## Página web (rede local)
+
+Ao ligar, o ESP32 conecta no WiFi e sobe um servidor HTTP. Abra o **IP dele** no
+navegador (celular ou PC **na mesma rede**) e veja temperatura e umidade **ao
+vivo** — a página se atualiza sozinha a cada 2s, sem F5. Nada sai pra internet.
+
+Descubra o IP de dois jeitos:
+
+- No **LCD**: logo após conectar, ele mostra `Abra no browser:` e o IP.
+- No **log serial**: `I (xxx) wifi: conectado — IP: 192.168.x.x`.
+
+Rotas do servidor:
+
+| Rota | Retorna |
+|------|---------|
+| `/` | a página HTML (dashboard ao vivo) |
+| `/data` | JSON: `{"temperature":19.4,"humidity":75.2,"uptime_s":123,"valid":true}` |
+
+O WiFi (SSID/senha) está em [main/wifi.hpp](main/wifi.hpp); a página e as rotas em
+[main/web.hpp](main/web.hpp). O `uptime_s` é o tempo desde o boot — o ESP32 não
+sabe a hora real sem NTP (que exigiria... bom, já tem WiFi, dá pra adicionar
+depois se quiser data/hora de verdade).
 
 ## Type-safe pins
 

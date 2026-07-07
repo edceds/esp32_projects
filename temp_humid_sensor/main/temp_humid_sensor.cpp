@@ -25,12 +25,16 @@ extern "C"
 #include "freertos/task.h"
 #include "esp_rom_sys.h" // esp_rom_delay_us
 #include "esp_log.h"
+#include "esp_timer.h"
+#include "nvs_flash.h"
 #include "driver/i2c_master.h"
 }
 
 #include <cstdio>
 #include "gpio_pin.hpp"
 #include "lcd1602.hpp"
+#include "wifi.hpp"
+#include "web.hpp"
 
 // The data pin. GPIO32 is on the left side of the DevKit and is output-capable.
 // Because DhtPin below is an OpenDrainPin, choosing an input-only GPIO (34-39)
@@ -162,6 +166,18 @@ static i2c_master_bus_handle_t i2c_setup()
 
 extern "C" void app_main(void)
 {
+  // NVS é exigido pelo driver de WiFi.
+  esp_err_t nvs = nvs_flash_init();
+  if (nvs == ESP_ERR_NVS_NO_FREE_PAGES || nvs == ESP_ERR_NVS_NEW_VERSION_FOUND)
+  {
+    nvs_flash_erase();
+    nvs_flash_init();
+  }
+
+  // Conecta no WiFi e sobe o servidor web (a página lê /data em JSON).
+  wifi::connect();
+  web::start();
+
   // The data line idles high; enable the internal pull-up as a backup to the
   // external 10k resistor. Construction sets the pull mode.
   DhtPin line;
@@ -186,6 +202,16 @@ extern "C" void app_main(void)
   // DHT22 needs ~1s after power-up before the first stable reading.
   vTaskDelay(pdMS_TO_TICKS(2000));
 
+  // Mostra o IP no LCD assim que o WiFi conectar, pra você saber qual endereço
+  // abrir no navegador.
+  if (lcd_err == ESP_OK && wifi::got_ip())
+  {
+    // IP na linha de baixo (cabe em 16); a porta :8080 avisada em cima.
+    lcd.print_line(0, "browser :8080");
+    lcd.print_line(1, wifi::ip_str());
+    vTaskDelay(pdMS_TO_TICKS(3000)); // deixa visível uns segundos
+  }
+
   while (true)
   {
     float temperature, humidity;
@@ -206,6 +232,12 @@ extern "C" void app_main(void)
     {
       ESP_LOGI(TAG, "Temperature: %.1f C   Humidity: %.1f %%",
                temperature, humidity);
+
+      // Publica pra página web (o servidor lê essa struct compartilhada).
+      web::g_reading.temperature.store(temperature);
+      web::g_reading.humidity.store(humidity);
+      web::g_reading.uptime_s.store((uint32_t)(esp_timer_get_time() / 1000000));
+      web::g_reading.valid.store(true);
 
       // Mostra no LCD: linha 0 temperatura, linha 1 umidade.
       // 0xDF é o caractere de grau (°) no mapa de caracteres do HD44780.
